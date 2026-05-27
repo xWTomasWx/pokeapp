@@ -17,11 +17,18 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _selectedLanguageCode = 'es';
   String _selectedLanguageLabel = 'Español';
+  ThemeMode _themeMode = ThemeMode.light;
 
   void _updateLanguage(String code, String label) {
     setState(() {
       _selectedLanguageCode = code;
       _selectedLanguageLabel = label;
+    });
+  }
+
+  void _updateThemeMode(ThemeMode themeMode) {
+    setState(() {
+      _themeMode = themeMode;
     });
   }
 
@@ -43,10 +50,17 @@ class _MyAppState extends State<MyApp> {
         textTheme: textTheme,
         primaryTextTheme: textTheme,
       ),
+      darkTheme: materialTheme.dark().copyWith(
+        textTheme: textTheme,
+        primaryTextTheme: textTheme,
+      ),
+      themeMode: _themeMode,
       home: HomePage(
         selectedLanguageCode: _selectedLanguageCode,
         selectedLanguageLabel: _selectedLanguageLabel,
+        selectedThemeMode: _themeMode,
         onLanguageChanged: _updateLanguage,
+        onThemeModeChanged: _updateThemeMode,
       ),
     );
   }

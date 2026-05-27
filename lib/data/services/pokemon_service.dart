@@ -96,6 +96,8 @@ class PokemonService {
     final data = json.decode(response.body);
     final results = (data['results'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
 
+    final allowedCodes = {'en', 'fr', 'de', 'es', 'it', 'ja'};
+
     final languages = await Future.wait<LanguageOption?>(
       results.map((entry) async {
         final url = entry['url'] as String?;
@@ -103,6 +105,7 @@ class PokemonService {
         final detail = await _fetchJson(url);
         if (detail['official'] != true) return null;
         final code = detail['iso639'] as String? ?? detail['name'] as String? ?? '';
+        if (!allowedCodes.contains(code)) return null;
         final label = _extractLocalizedName(detail['names'] as List<dynamic>?, 'en');
         if (code.isEmpty || label.isEmpty) return null;
         return LanguageOption(code: code, name: label);
@@ -112,17 +115,30 @@ class PokemonService {
     return languages.whereType<LanguageOption>().toList()..sort((a, b) => a.name.compareTo(b.name));
   }
 
+  String _languageCodeToApiName(String languageCode) {
+    const languageMap = {
+      'es': 'spanish',
+      'en': 'english',
+      'fr': 'french',
+      'de': 'german',
+      'it': 'italian',
+      'ja': 'japanese',
+    };
+    return languageMap[languageCode] ?? languageCode;
+  }
+
   String _extractLocalizedName(List<dynamic>? names, String languageCode) {
     if (names == null) return '';
 
+    final apiLanguageName = _languageCodeToApiName(languageCode);
     for (final item in names.cast<Map<String, dynamic>>()) {
-      if (item['language']?['name'] == languageCode) {
+      if (item['language']?['name'] == apiLanguageName) {
         return item['name'] as String? ?? '';
       }
     }
 
     for (final item in names.cast<Map<String, dynamic>>()) {
-      if (item['language']?['name'] == 'en') {
+      if (item['language']?['name'] == 'english') {
         return item['name'] as String? ?? '';
       }
     }
@@ -133,8 +149,9 @@ class PokemonService {
   String? _extractLocalizedFlavorText(List<dynamic>? entries, String languageCode) {
     if (entries == null) return null;
 
+    final apiLanguageName = _languageCodeToApiName(languageCode);
     for (final item in entries.cast<Map<String, dynamic>>()) {
-      if (item['language']?['name'] == languageCode) {
+      if (item['language']?['name'] == apiLanguageName) {
         final flavor = item['flavor_text'] as String?;
         if (flavor != null && flavor.isNotEmpty) {
           return flavor.replaceAll(RegExp(r'\n|\f'), ' ').trim();
@@ -143,7 +160,7 @@ class PokemonService {
     }
 
     for (final item in entries.cast<Map<String, dynamic>>()) {
-      if (item['language']?['name'] == 'en') {
+      if (item['language']?['name'] == 'english') {
         final flavor = item['flavor_text'] as String?;
         if (flavor != null && flavor.isNotEmpty) {
           return flavor.replaceAll(RegExp(r'\n|\f'), ' ').trim();
@@ -233,5 +250,122 @@ class PokemonService {
   String _capitalize(String value) {
     if (value.isEmpty) return value;
     return value[0].toUpperCase() + value.substring(1);
+  }
+
+  Future<List<Pokemon>> searchPokemon(String query) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/pokemon?limit=1000'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final results = data['results'] as List;
+        final filtered = results
+            .map((json) => Pokemon.fromJson(json))
+            .where((pokemon) => pokemon.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+        return filtered;
+      }
+      throw Exception('Failed to search Pokemon');
+    } catch (e) {
+      throw Exception('Error searching Pokemon: $e');
+    }
+  }
+
+  Future<List<String>> searchAbilities(String query, {String languageCode = 'es'}) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/ability?limit=1000'));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final results = (data['results'] as List).cast<Map<String, dynamic>>();
+        
+        final abilities = <String>[];
+        for (final result in results) {
+          final url = result['url'] as String?;
+          if (url == null) continue;
+          
+          try {
+            final detail = await _fetchJson(url);
+            final names = detail['names'] as List<dynamic>?;
+            if (names != null) {
+              final localizedName = _extractLocalizedName(names, languageCode);
+              if (localizedName.isNotEmpty && 
+                  localizedName.toLowerCase().contains(query.toLowerCase())) {
+                abilities.add(localizedName);
+              }
+            }
+          } catch (_) {
+            continue;
+          }
+        }
+        
+        return abilities;
+      }
+      throw Exception('Failed to search abilities');
+    } catch (e) {
+      throw Exception('Error searching abilities: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchAbilityDetail(String abilityName, {String languageCode = 'es'}) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/ability?limit=1000'));
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load abilities');
+      }
+
+      final data = json.decode(response.body);
+      final results = (data['results'] as List).cast<Map<String, dynamic>>();
+
+      for (final result in results) {
+        final url = result['url'] as String?;
+        if (url == null) continue;
+
+        final detail = await _fetchJson(url);
+        final names = detail['names'] as List<dynamic>?;
+        final localizedName = _extractLocalizedName(names, languageCode);
+        
+        if (localizedName.toLowerCase() == abilityName.toLowerCase()) {
+          final effect = _extractLocalizedFlavorText(
+            detail['flavor_text_entries'] as List<dynamic>?,
+            languageCode,
+          );
+          
+          final shortEffect = detail['effect_entries'] as List<dynamic>?;
+          String? shortEffectText;
+          if (shortEffect != null && shortEffect.isNotEmpty) {
+            final apiLanguageName = _languageCodeToApiName(languageCode);
+            for (final entry in shortEffect.cast<Map<String, dynamic>>()) {
+              if (entry['language']?['name'] == apiLanguageName) {
+                shortEffectText = entry['effect'] as String?;
+                break;
+              }
+            }
+            if (shortEffectText == null && shortEffect.isNotEmpty) {
+              for (final entry in shortEffect.cast<Map<String, dynamic>>()) {
+                if (entry['language']?['name'] == 'english') {
+                  shortEffectText = entry['effect'] as String?;
+                  break;
+                }
+              }
+            }
+            if (shortEffectText == null && shortEffect.isNotEmpty) {
+              shortEffectText = shortEffect[0]['effect'] as String?;
+            }
+          }
+
+          return {
+            'name': localizedName,
+            'description': effect,
+            'shortEffect': shortEffectText,
+            'id': detail['id'],
+            'isMainSeries': detail['is_main_series'] ?? false,
+            'generation': detail['generation']?['name'],
+          };
+        }
+      }
+
+      throw Exception('Ability not found: $abilityName');
+    } catch (e) {
+      throw Exception('Error fetching ability detail: $e');
+    }
   }
 }

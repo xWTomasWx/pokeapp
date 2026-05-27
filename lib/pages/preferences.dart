@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import '../localization/app_localizations.dart';
 import '../data/services/pokemon_service.dart';
 
 class PreferencesPage extends StatefulWidget {
   final String selectedLanguageCode;
   final String selectedLanguageLabel;
+  final ThemeMode selectedThemeMode;
   final void Function(String code, String label) onLanguageChanged;
+  final void Function(ThemeMode themeMode) onThemeModeChanged;
 
   const PreferencesPage({
     super.key,
     required this.selectedLanguageCode,
     required this.selectedLanguageLabel,
+    required this.selectedThemeMode,
     required this.onLanguageChanged,
+    required this.onThemeModeChanged,
   });
 
   @override
@@ -24,12 +29,14 @@ class _PreferencesPageState extends State<PreferencesPage> {
   String? _error;
   String? _selectedLanguageCode;
   String? _selectedLanguageLabel;
+  late ThemeMode _selectedThemeMode;
 
   @override
   void initState() {
     super.initState();
     _selectedLanguageCode = widget.selectedLanguageCode;
     _selectedLanguageLabel = widget.selectedLanguageLabel;
+    _selectedThemeMode = widget.selectedThemeMode;
     _loadLanguages();
   }
 
@@ -55,9 +62,24 @@ class _PreferencesPageState extends State<PreferencesPage> {
       _selectedLanguageLabel = language.name;
     });
     widget.onLanguageChanged(language.code, language.name);
+    final localizations = AppLocalizations(language.code);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Idioma cambiado a ${language.name}'),
+        content: Text(localizations.languageChangedMessage(language.name)),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _selectThemeMode(ThemeMode themeMode) {
+    setState(() {
+      _selectedThemeMode = themeMode;
+    });
+    widget.onThemeModeChanged(themeMode);
+    final localizations = AppLocalizations(_selectedLanguageCode ?? widget.selectedLanguageCode);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(localizations.themeChangedMessage(themeMode)),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -65,14 +87,16 @@ class _PreferencesPageState extends State<PreferencesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations(_selectedLanguageCode ?? widget.selectedLanguageCode);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Preferencias'),
+        title: Text(localizations.preferencesTitle),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text('Error: $_error'))
+              ? Center(child: Text('${localizations.errorPrefix}$_error'))
               : ListView.separated(
                   padding: const EdgeInsets.all(16.0),
                   itemCount: _languages.length + 1,
@@ -93,12 +117,36 @@ class _PreferencesPageState extends State<PreferencesPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Idioma actual: $selectedLabel',
+                            '${localizations.preferencesCurrentLanguage}$selectedLabel',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Selecciona el idioma que quieres usar para los datos de la API.',
+                          Text(
+                            localizations.preferencesDescription,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            localizations.preferencesThemeTitle,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          RadioListTile<ThemeMode>(
+                            value: ThemeMode.light,
+                            groupValue: _selectedThemeMode,
+                            title: Text(localizations.preferencesLight),
+                            subtitle: Text(localizations.preferencesLightSubtitle),
+                            onChanged: (value) {
+                              if (value != null) _selectThemeMode(value);
+                            },
+                          ),
+                          RadioListTile<ThemeMode>(
+                            value: ThemeMode.dark,
+                            groupValue: _selectedThemeMode,
+                            title: Text(localizations.preferencesDark),
+                            subtitle: Text(localizations.preferencesDarkSubtitle),
+                            onChanged: (value) {
+                              if (value != null) _selectThemeMode(value);
+                            },
                           ),
                         ],
                       );

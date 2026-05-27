@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../localization/app_localizations.dart';
 import '../data/services/pokemon_service.dart';
 
 class TypeEffectivenessPage extends StatefulWidget {
@@ -54,10 +55,11 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
       } else if (selectedTypes.length < 2) {
         selectedTypes.add(type);
       } else {
+        final localizations = AppLocalizations(widget.languageCode);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Solo puedes seleccionar hasta 2 tipos.'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(localizations.typeEffectivenessLimit),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -110,10 +112,12 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations(widget.languageCode);
+
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Debilidades y Eficacias de Tipos'),
+          title: Text(localizations.typeEffectivenessTitle),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -122,9 +126,9 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
     if (_error != null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Debilidades y Eficacias de Tipos'),
+          title: Text(localizations.typeEffectivenessTitle),
         ),
-        body: Center(child: Text('Error: $_error')),
+        body: Center(child: Text('${localizations.errorPrefix}$_error')),
       );
     }
 
@@ -142,13 +146,11 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
         .toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
-    final selectedLabel = selectedTypes.isEmpty
-        ? 'Selecciona 1 o 2 tipos para ver debilidades y efectividades.'
-        : 'Tipos seleccionados: ${selectedTypes.join(' / ')}';
+    final selectedLabel = localizations.selectedTypesLabel(selectedTypes);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Debilidades y Eficacias de Tipos'),
+        title: Text(localizations.typeEffectivenessTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -158,7 +160,7 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12.0),
-          const Text('Selecciona hasta dos tipos:'),
+          Text(localizations.typeEffectivenessSelectTypes),
           const SizedBox(height: 12.0),
           Wrap(
             spacing: 8.0,
@@ -175,14 +177,14 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Resultados',
+                    localizations.typeEffectivenessResults,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12.0),
                   if (selectedTypes.isEmpty)
-                    const Text('Aún no has seleccionado ningún tipo.')
+                    Text(localizations.typeEffectivenessNoSelection)
                   else ...[
-                    const Text('Debilidades:'),
+                    Text(localizations.typeEffectivenessWeaknesses),
                     const SizedBox(height: 8.0),
                     _buildEffectivenessChips(
                       superEffective.map((entry) {
@@ -197,14 +199,14 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
                       const Color.fromRGBO(244, 67, 54, 0.15),
                     ),
                     const SizedBox(height: 16.0),
-                    const Text('Eficacias neutrales:'),
+                    Text(localizations.typeEffectivenessNeutral),
                     const SizedBox(height: 8.0),
                     _buildEffectivenessChips(
                       neutral.map((entry) => '${entry.key} x1').toList(),
                       const Color.fromRGBO(158, 158, 158, 0.15),
                     ),
                     const SizedBox(height: 16.0),
-                    const Text('Resistencias:'),
+                    Text(localizations.typeEffectivenessResistances),
                     const SizedBox(height: 8.0),
                     _buildEffectivenessChips(
                       notEffective.map((entry) {
@@ -226,9 +228,9 @@ class _TypeEffectivenessPageState extends State<TypeEffectivenessPage> {
             ),
           ),
           const SizedBox(height: 12.0),
-          const Text(
-            'Consejo: si seleccionas dos tipos, el resultado combina ambas defensas multiplicando la eficacia.',
-            style: TextStyle(fontSize: 14.0),
+          Text(
+            localizations.typeEffectivenessTip,
+            style: const TextStyle(fontSize: 14.0),
           ),
         ],
       ),

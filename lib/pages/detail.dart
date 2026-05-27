@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
+import '../localization/app_localizations.dart';
 import '../data/entities/pokemon.dart';
 import '../data/services/pokemon_service.dart';
+import 'ability_detail.dart';
 
 class DetailPage extends StatefulWidget {
   final Pokemon pokemon;
@@ -84,9 +86,49 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
+  Widget _buildAbilityChips(String title, List<String>? values) {
+    if (values == null || values.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: values
+              .map(
+                (ability) => GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AbilityDetailPage(
+                          abilityName: ability,
+                          languageCode: widget.languageCode,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Chip(
+                    label: Text(ability),
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pokemon = _pokemonDetail ?? widget.pokemon;
+
+    final localizations = AppLocalizations(widget.languageCode);
 
     return Scaffold(
       appBar: AppBar(
@@ -108,14 +150,14 @@ class _DetailPageState extends State<DetailPage> {
                       _isShiny = index == 1;
                     });
                   },
-                  children: const [
+                  children: [
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text('Normal'),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text(localizations.detailNormal),
                     ),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text('Shiny'),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Text(localizations.detailShiny),
                     ),
                   ],
                 ),
@@ -145,25 +187,25 @@ class _DetailPageState extends State<DetailPage> {
               const Center(child: CircularProgressIndicator()),
               const SizedBox(height: 24),
             ] else if (_error != null) ...[
-              Center(child: Text('Error: $_error')),
+              Center(child: Text('${localizations.errorPrefix}$_error')),
               const SizedBox(height: 24),
             ] else ...[
               if (pokemon.flavorText != null) ...[
-                const Text('Descripción', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(localizations.detailDescription, style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Text(pokemon.flavorText!),
                 const SizedBox(height: 16),
               ],
-              _buildInfoRow('Altura', '${pokemon.height ?? '-'}'),
-              _buildInfoRow('Peso', '${pokemon.weight ?? '-'}'),
-              _buildInfoRow('Exp. Base', '${pokemon.baseExperience ?? '-'}'),
+              _buildInfoRow(localizations.detailHeight, '${pokemon.height ?? '-'}'),
+              _buildInfoRow(localizations.detailWeight, '${pokemon.weight ?? '-'}'),
+              _buildInfoRow(localizations.detailBaseExp, '${pokemon.baseExperience ?? '-'}'),
               const SizedBox(height: 16),
-              _buildChips('Tipos', pokemon.types),
+              _buildChips(localizations.detailTypes, pokemon.types),
               const SizedBox(height: 16),
-              _buildChips('Habilidades', pokemon.abilities),
+              _buildAbilityChips(localizations.detailAbilities, pokemon.abilities),
               const SizedBox(height: 16),
               if (pokemon.stats != null && pokemon.stats!.isNotEmpty) ...[
-                const Text('Estadísticas', style: TextStyle(fontWeight: FontWeight.w600)),
+                Text(localizations.detailStats, style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 ...pokemon.stats!.entries
                     .map((entry) => _buildInfoRow(entry.key, entry.value.toString())),
